@@ -1,56 +1,58 @@
 // ==================== إعدادات الموقع ====================
-// ⚠️ قم بتعديل هذه القيم حسب مشروعك
+// ✅ نسخة كاملة ومعدلة لتعمل مع EMQX
 
 const CONFIG = {
     // معرف الآلة (يجب أن يطابق المعرف في كود ESP32)
     MACHINE_ID: 'machine_001',
     
-    // إعدادات MQTT (اختر واحداً من الخيارات أدناه)
+    // إعدادات MQTT - استخدام EMQX
     MQTT: {
-        // الخيار 1: HiveMQ (مجاني - موصى به)
-        USE_HIVEMQ: true,
+        USE_HIVEMQ: false,        // عطل HiveMQ
+        USE_EMQX: true,           // فعّل EMQX (مستقر)
+        USE_MOSQUITTO: false,     // عطل Mosquitto
+        
+        // روابط الخوادم
         HIVEMQ_URL: 'wss://broker.hivemq.com:8000/mqtt',
-        
-        // الخيار 2: EMQX (مجاني)
-        USE_EMQX: false,
-        EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',
-        
-        // الخيار 3: Mosquitto (مجاني)
-        USE_MOSQUITTO: false,
+        EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',  // EMQX عبر WebSocket
         MOSQUITTO_URL: 'wss://test.mosquitto.org:8081/mqtt',
         
-        // إعدادات مشتركة
+        // مواضيع MQTT الأساسية
         TOPICS: {
-            COMMAND: 'stringart/command',      // إرسال الأوامر
-            STATUS: 'stringart/status',         // استقبال الحالة
-            FILE: 'stringart/file',              // إرسال الملفات
-            MANUAL: 'stringart/manual'           // أوامر التحكم اليدوي
+            COMMAND: 'stringart/command',
+            STATUS: 'stringart/status',
+            FILE: 'stringart/file',
+            MANUAL: 'stringart/manual',
+            SETTINGS: 'stringart/settings',
+            RESPONSE: 'stringart/response'
         }
     },
     
-    // إعدادات Firebase (بديل عن MQTT - استخدم واحداً فقط)
+    // إعدادات Firebase (معطل - غير مستخدم)
     FIREBASE: {
-        USE_FIREBASE: false,                     // true إذا أردت استخدام Firebase
+        USE_FIREBASE: false,
         DATABASE_URL: 'https://your-project.firebaseio.com',
         API_KEY: 'your-api-key'
     },
     
-    // إعدادات الموقع
+    // إعدادات الموقع والواجهة
     UI: {
-        REFRESH_INTERVAL: 1000,                  // تحديث كل ثانية
-        MAX_FILE_SIZE: 50 * 1024,                 // 50 كيلوبايت
-        TOTAL_NAILS: 250,
-        STEPS_PER_NAIL: 16
+        REFRESH_INTERVAL: 1000,           // تحديث كل ثانية
+        MAX_FILE_SIZE: 50 * 1024,          // 50 كيلوبايت كحد أقصى
+        TOTAL_NAILS: 250,                   // إجمالي المسامير
+        STEPS_PER_NAIL: 16                  // خطوات بين كل مسمار
     }
 };
 
-// لا تغير هذا - يحدد أي MQTT سنستخدم
+// تحديد عنوان MQTT النشط (تلقائي)
 let MQTT_URL = '';
 
-if (CONFIG.MQTT.USE_HIVEMQ) {
-    MQTT_URL = CONFIG.MQTT.HIVEMQ_URL;
-} else if (CONFIG.MQTT.USE_EMQX) {
+if (CONFIG.MQTT.USE_EMQX) {
     MQTT_URL = CONFIG.MQTT.EMQX_URL;
+    console.log('✅ استخدام خادم EMQX');
+} else if (CONFIG.MQTT.USE_HIVEMQ) {
+    MQTT_URL = CONFIG.MQTT.HIVEMQ_URL;
+    console.log('⚠️ استخدام خادم HiveMQ');
 } else if (CONFIG.MQTT.USE_MOSQUITTO) {
     MQTT_URL = CONFIG.MQTT.MOSQUITTO_URL;
+    console.log('⚠️ استخدام خادم Mosquitto');
 }

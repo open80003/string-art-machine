@@ -719,3 +719,24 @@ window.manualDrill = manualDrill;
 window.calibrate = calibrate;
 window.saveSettings = saveSettings;
 window.testServo = testServo;
+// ==================== اختبار اتصال EMQX مباشرة ====================
+window.testEMQX = function() {
+    console.log('🔍 اختبار اتصال EMQX مباشرة...');
+    
+    const testSocket = new WebSocket('wss://broker.emqx.io:8084/mqtt');
+    
+    testSocket.onopen = function() {
+        console.log('✅✅✅ اتصال EMQX ناجح!');
+        showToast('✅ اتصال EMQX ناجح', 'success');
+        testSocket.close();
+    };
+    
+    testSocket.onerror = function(error) {
+        console.error('❌❌❌ فشل اتصال EMQX:', error);
+        showToast('❌ فشل اتصال EMQX', 'error');
+    };
+    
+    testSocket.onclose = function() {
+        console.log('📴 تم إغلاق اتصال الاختبار');
+    };
+}

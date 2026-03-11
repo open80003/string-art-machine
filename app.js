@@ -55,8 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ تم تهيئة الموقع بنجاح');
 });
 
-// ==================== دوال الاتصال ====================
 
+        // ==================== الاتصال بـ MQTT (نسخة EMQX فقط) ====================
 function connectMQTT() {
     if (!MQTT_URL) {
         console.error('❌ لم يتم تحديد خادم MQTT');
@@ -65,9 +65,7 @@ function connectMQTT() {
     }
     
     const clientId = generateClientId();
-    const brokerName = getActiveBrokerName();
-    
-    console.log(`📡 محاولة الاتصال بـ ${brokerName}: ${MQTT_URL}`);
+    console.log(`📡 محاولة الاتصال بـ EMQX: ${MQTT_URL}`);
     console.log(`📋 معرف الجلسة: ${clientId}`);
     
     // إنهاء الاتصال القديم إذا وجد
@@ -79,12 +77,20 @@ function connectMQTT() {
         }
     }
     
-    // إعدادات مخصصة
+    // إعدادات مخصصة لـ EMQX
     const options = {
         ...MQTT_OPTIONS,
         clientId: clientId,
         reconnectPeriod: 3000,
-        connectTimeout: 10000,
+        connectTimeout: 15000,  // زيادة المهلة
+        protocolVersion: 4,      // MQTT 3.1.1
+        
+        // إعدادات خاصة بـ EMQX
+        keepalive: 60,
+        clean: true,
+        
+        // تجربة إعادة الاتصال بشكل متكرر
+        reconnectPeriod: 2000
     };
     
     try {
@@ -97,8 +103,8 @@ function connectMQTT() {
     
     // حدث الاتصال الناجح
     mqttClient.on('connect', function() {
-        console.log('✅ متصل بخادم MQTT بنجاح!');
-        updateConnectionStatus(true, `متصل بـ ${brokerName}`);
+        console.log('✅ متصل بـ EMQX بنجاح!');
+        updateConnectionStatus(true, 'متصل');
         
         // الاشتراك في المواضيع
         subscribeToTopics();
@@ -106,7 +112,7 @@ function connectMQTT() {
         // إرسال رسالة ترحيب
         publishWelcome();
         
-        showToast(`✅ متصل بالخادم`, 'success');
+        showToast('✅ متصل بالخادم', 'success');
     });
     
     // حدث الخطأ
@@ -123,13 +129,18 @@ function connectMQTT() {
     
     // حدث إعادة الاتصال
     mqttClient.on('reconnect', function() {
-        console.log('🔄 جاري إعادة الاتصال...');
+        console.log('🔄 جاري إعادة الاتصال بـ EMQX...');
         updateConnectionStatus(false, 'جاري إعادة الاتصال');
     });
     
     // حدث استلام رسالة
     mqttClient.on('message', function(topic, message) {
         handleIncomingMessage(topic, message.toString());
+    });
+    
+    // حدث إغلاق الاتصال
+    mqttClient.on('close', function() {
+        console.log('🔌 تم إغلاق الاتصال');
     });
 }
 

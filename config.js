@@ -5,8 +5,8 @@ const CONFIG = {
     
     // إعدادات MQTT - استخدام EMQX (الأكثر استقراراً)
     MQTT: {
-        USE_HIVEMQ: false,        // HiveMQ معطل
-        USE_EMQX: true,           // EMQX مفعل - الأفضل
+        USE_HIVEMQ: true,        // HiveMQ معطل
+        USE_EMQX: false,           // EMQX مفعل - الأفضل
         USE_MOSQUITTO: false,     // Mosquitto معطل
         
         // روابط الخوادم

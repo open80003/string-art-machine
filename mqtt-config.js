@@ -1,6 +1,7 @@
 // ==================== إعدادات MQTT المتقدمة ====================
+// ✅ نسخة معدلة - EMQX فقط
 
-// قائمة بخوادم MQTT المتاحة
+// قائمة بخوادم MQTT - EMQX فقط
 const MQTT_BROKERS = {
     EMQX: {
         name: 'EMQX',
@@ -8,21 +9,8 @@ const MQTT_BROKERS = {
         public: true,
         description: 'خادم EMQX - الأكثر استقراراً',
         status: 'مستقر ✅'
-    },
-    HIVEMQ: {
-        name: 'HiveMQ',
-        url: 'wss://broker.hivemq.com:8000/mqtt',
-        public: true,
-        description: 'خادم HiveMQ',
-        status: 'متوسط ⚠️'
-    },
-    MOSQUITTO: {
-        name: 'Mosquitto',
-        url: 'wss://test.mosquitto.org:8081/mqtt',
-        public: true,
-        description: 'خادم اختبار مجاني',
-        status: 'تجريبي 🔧'
     }
+    // ❌ تمت إزالة HiveMQ و Mosquitto
 };
 
 // إعدادات الاتصال المحسنة
@@ -33,7 +21,7 @@ const MQTT_OPTIONS = {
     connectTimeout: 30000,
     
     // إعادة الاتصال التلقائي
-    reconnectPeriod: 5000,
+    reconnectPeriod: 3000,        // 3 ثواني بين المحاولات
     
     // بروتوكول WebSocket
     protocolVersion: 4,  // MQTT 3.1.1
@@ -48,7 +36,11 @@ const MQTT_OPTIONS = {
         payload: JSON.stringify({ online: false }),
         qos: 1,
         retain: false
-    }
+    },
+    
+    // إعدادات إضافية للاستقرار
+    resubscribe: true,
+    qos: 1
 };
 
 // مواضيع MQTT (بنية موحدة مع ESP32)
@@ -100,8 +92,8 @@ function validateConfig() {
         errors.push('❌ MACHINE_ID غير معرف');
     }
     
-    if (!CONFIG.MQTT.USE_EMQX && !CONFIG.MQTT.USE_HIVEMQ && !CONFIG.MQTT.USE_MOSQUITTO) {
-        errors.push('❌ لم يتم تفعيل أي خادم MQTT');
+    if (!CONFIG.MQTT.USE_EMQX) {
+        errors.push('❌ EMQX غير مفعل - يجب تفعيله');
     }
     
     return { errors, warnings };
@@ -109,8 +101,5 @@ function validateConfig() {
 
 // الحصول على اسم الخادم النشط
 function getActiveBrokerName() {
-    if (CONFIG.MQTT.USE_EMQX) return 'EMQX';
-    if (CONFIG.MQTT.USE_HIVEMQ) return 'HiveMQ';
-    if (CONFIG.MQTT.USE_MOSQUITTO) return 'Mosquitto';
-    return 'غير معروف';
+    return 'EMQX';  // دائماً EMQX
 }

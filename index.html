@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آلة String Art - تحكم ذكي</title>
+    
+    <!-- Font Awesome للأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- ملفات التنسيق -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- MQTT مكتبة -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    
+    <!-- ملفات الإعدادات -->
+    <script src="config.js"></script>
+    <script src="mqtt-config.js"></script>
+</head>
+<body>
+    <!-- ==================== شريط الحالة العلوي ==================== -->
+    <div class="status-bar">
+        <div class="container">
+            <div class="status-items">
+                <div class="status-item" id="connection-status-item">
+                    <i class="fas fa-circle" id="connection-led"></i>
+                    <span id="connection-text">جاري الاتصال...</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-microchip"></i>
+                    <span id="machine-state">في الانتظار</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-map-pin"></i>
+                    <span id="current-nail">0</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-chart-line"></i>
+                    <span id="progress">0%</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="last-update">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== شريط التنقل ==================== -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-paint-brush"></i>
+                <h1>آلة String Art</h1>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" onclick="showPage('drawing')">
+                    <i class="fas fa-paint-brush"></i>
+                    الرسم
+                </button>
+                <button class="nav-btn" onclick="showPage('drilling')">
+                    <i class="fas fa-tachometer-alt"></i>
+                    التثقيب
+                </button>
+                <button class="nav-btn" onclick="showPage('settings')">
+                    <i class="fas fa-cog"></i>
+                    الإعدادات
+                </button>
+                <button class="nav-btn" onclick="showPage('manual')">
+                    <i class="fas fa-gamepad"></i>
+                    تحكم يدوي
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== المحتوى الرئيسي ==================== -->
+    <main class="container">
+        <!-- ========== صفحة الرسم ========== -->
+        <div id="drawing-page" class="page active">
+            <div class="page-header">
+                <h2><i class="fas fa-paint-brush"></i> صفحة الرسم</h2>
+            </div>
+
+            <div class="grid-2">
+                <!-- بطاقة معلومات الملف -->
+                <div class="card">
+                    <h3><i class="fas fa-file-alt"></i> معلومات الملف</h3>
+                    <div class="file-info">
+                        <p><strong>اسم الملف:</strong> <span id="file-name">-</span></p>
+                        <p><strong>عدد الأوامر:</strong> <span id="file-commands">0</span></p>
+                        <p><strong>أول مسمار:</strong> <span id="file-first">-</span></p>
+                        <p><strong>آخر مسمار:</strong> <span id="file-last">-</span></p>
+                        <p><strong>حجم الملف:</strong> <span id="file-size">0</span> بايت</p>
+                    </div>
+                    
+                    <div class="file-upload-area" id="upload-area">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p>اسحب الملف هنا أو اضغط للاختيار</p>
+                        <p class="small">(ملفات txt - حد أقصى 50 كيلوبايت)</p>
+                        <input type="file" id="file-input" accept=".txt" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                            <i class="fas fa-upload"></i> اختيار ملف
+                        </button>
+                    </div>
+
+                    <div class="file-actions" style="margin-top: 20px;">
+                        <button class="btn btn-danger" onclick="deleteFile()" id="delete-file-btn" disabled>
+                            <i class="fas fa-trash"></i> حذف الملف
+                        </button>
+                    </div>
+                </div>
+
+                <!-- بطاقة التحكم بالرسم -->
+                <div class="card">
+                    <h3><i class="fas fa-play-circle"></i> التحكم بالرسم</h3>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" id="drawing-progress" style="width: 0%"></div>
+                    </div>
+                    
+                    <p style="text-align: center; margin: 10px 0;">
+                        <span id="executed-commands">0</span> / <span id="total-commands">0</span> أمر
+                    </p>
+
+                    <div class="nail-info">
+                        <p><i class="fas fa-arrow-right"></i> المسمار الحالي: <strong id="drawing-current">0</strong></p>
+                        <p><i class="fas fa-arrow-left"></i> المسمار التالي: <strong id="drawing-next">0</strong></p>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-success" onclick="sendCommand('START_DRAWING')" id="start-drawing-btn" disabled>
+                            <i class="fas fa-play"></i> بدء الرسم
+                        </button>
+                        <button class="btn btn-warning" onclick="sendCommand('PAUSE')" id="pause-drawing-btn" disabled>
+                            <i class="fas fa-pause"></i> إيقاف مؤقت
+                        </button>
+                        <button class="btn btn-danger" onclick="sendCommand('STOP')" id="stop-drawing-btn" disabled>
+                            <i class="fas fa-stop"></i> إيقاف
+                        </button>
+                    </div>
+
+                    <div class="resume-section" id="resume-section" style="display: none; margin-top: 20px;">
+                        <p>✅ يوجد عمل سابق غير مكتمل</p>
+                        <button class="btn btn-primary" onclick="sendCommand('RESUME')">
+                            <i class="fas fa-redo"></i> استئناف العمل
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== صفحة التثقيب ========== -->
+        <div id="drilling-page" class="page">
+            <div class="page-header">
+                <h2><i class="fas fa-tachometer-alt"></i> صفحة التثقيب</h2>
+            </div>
+
+            <div class="grid-2">
+                <!-- بطاقة تقدم التثقيب -->
+                <div class="card">
+                    <h3><i class="fas fa-chart-line"></i> تقدم التثقيب</h3>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" id="drilling-progress" style="width: 0%"></div>
+                    </div>
+                    
+                    <p style="text-align: center; font-size: 24px; margin: 20px 0;">
+                        <span id="drilling-current">0</span> / <span id="drilling-total">250</span>
+                    </p>
+                    
+                    <div class="drilling-info">
+                        <p>⏱️ الوقت المتبقي: <span id="drilling-time">0</span> دقيقة</p>
+                    </div>
+                </div>
+
+                <!-- بطاقة التحكم بالتثقيب -->
+                <div class="card">
+                    <h3><i class="fas fa-play-circle"></i> التحكم بالتثقيب</h3>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-success" onclick="sendCommand('START_DRILLING')" id="start-drilling-btn">
+                            <i class="fas fa-play"></i> بدء التثقيب
+                        </button>
+                        <button class="btn btn-warning" onclick="sendCommand('PAUSE')" id="pause-drilling-btn" disabled>
+                            <i class="fas fa-pause"></i> إيقاف مؤقت
+                        </button>
+                        <button class="btn btn-danger" onclick="sendCommand('STOP')" id="stop-drilling-btn" disabled>
+                            <i class="fas fa-stop"></i> إيقاف
+                        </button>
+                    </div>
+
+                    <div class="info-box" style="margin-top: 20px;">
+                        <p><i class="fas fa-info-circle"></i> معلومات التثقيب:</p>
+                        <ul>
+                            <li>إجمالي الثقوب: 250 ثقب</li>
+                            <li>زمن الحفر: 2 ثانية لكل ثقب</li>
+                            <li>الوقت الإجمالي: ~8.3 دقائق</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== صفحة الإعدادات ========== -->
+        <div id="settings-page" class="page">
+            <div class="page-header">
+                <h2><i class="fas fa-cog"></i> الإعدادات</h2>
+                <button class="btn btn-primary" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> حفظ الإعدادات
+                </button>
+            </div>
+
+            <div class="grid-2">
+                <!-- إعدادات المحرك -->
+                <div class="card">
+                    <h3><i class="fas fa-motorcycle"></i> إعدادات المحرك</h3>
+                    
+                    <div class="form-group">
+                        <label>سرعة المحرك (خطوة/ثانية):</label>
+                        <input type="range" id="motor-speed" min="100" max="4000" value="1000" step="10" oninput="this.nextElementSibling.value = this.value">
+                        <output>1000</output>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>تسارع المحرك (خطوة/ثانية²):</label>
+                        <input type="range" id="motor-accel" min="50" max="2000" value="500" step="10" oninput="this.nextElementSibling.value = this.value">
+                        <output>500</output>
+                    </div>
+                </div>
+
+                <!-- إعدادات القلم -->
+                <div class="card">
+                    <h3><i class="fas fa-pencil-alt"></i> إعدادات القلم</h3>
+                    
+                    <div class="form-group">
+                        <label>زاوية إدخال القلم:</label>
+                        <input type="number" id="pen-in-angle" min="0" max="180" value="30" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زاوية إخراج القلم:</label>
+                        <input type="number" id="pen-out-angle" min="0" max="180" value="90" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زاوية رفع القلم:</label>
+                        <input type="number" id="pen-up-angle" min="0" max="180" value="20" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زاوية خفض القلم:</label>
+                        <input type="number" id="pen-down-angle" min="0" max="180" value="70" class="form-control">
+                    </div>
+                </div>
+
+                <!-- إعدادات المثقاب -->
+                <div class="card">
+                    <h3><i class="fas fa-tools"></i> إعدادات المثقاب</h3>
+                    
+                    <div class="form-group">
+                        <label>زاوية رفع المثقاب:</label>
+                        <input type="number" id="drill-up-angle" min="0" max="180" value="10" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زاوية إنزال المثقاب:</label>
+                        <input type="number" id="drill-down-angle" min="0" max="180" value="85" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زمن الحفر (مللي ثانية):</label>
+                        <input type="number" id="drill-time" min="500" max="5000" value="2000" step="100" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>زمن لف الخيط (مللي ثانية):</label>
+                        <input type="number" id="wrap-time" min="200" max="2000" value="500" step="50" class="form-control">
+                    </div>
+                </div>
+
+                <!-- أزرار الاختبار -->
+                <div class="card">
+                    <h3><i class="fas fa-flask"></i> اختبار السيرفو</h3>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="testServo(1, 30)">سيرفو 1 (30°)</button>
+                        <button class="btn btn-secondary" onclick="testServo(1, 90)">سيرفو 1 (90°)</button>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="testServo(2, 20)">سيرفو 2 (20°)</button>
+                        <button class="btn btn-secondary" onclick="testServo(2, 70)">سيرفو 2 (70°)</button>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="testServo(3, 10)">سيرفو 3 (10°)</button>
+                        <button class="btn btn-secondary" onclick="testServo(3, 85)">سيرفو 3 (85°)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== صفحة التحكم اليدوي ========== -->
+        <div id="manual-page" class="page">
+            <div class="page-header">
+                <h2><i class="fas fa-gamepad"></i> التحكم اليدوي</h2>
+            </div>
+
+            <div class="grid-2">
+                <!-- تحريك المحرك -->
+                <div class="card">
+                    <h3><i class="fas fa-arrows-alt"></i> تحريك المحرك</h3>
+                    
+                    <div class="form-group">
+                        <label>عدد المسامير:</label>
+                        <input type="number" id="move-amount" min="1" max="50" value="1" class="form-control">
+                    </div>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="manualMove(1)">
+                            <i class="fas fa-arrow-right"></i> مسمار للأمام
+                        </button>
+                        <button class="btn btn-primary" onclick="manualMove(-1)">
+                            <i class="fas fa-arrow-left"></i> مسمار للخلف
+                        </button>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="manualMove(5)">5 أمام</button>
+                        <button class="btn btn-secondary" onclick="manualMove(-5)">5 خلف</button>
+                        <button class="btn btn-secondary" onclick="manualMove(10)">10 أمام</button>
+                        <button class="btn btn-secondary" onclick="manualMove(-10)">10 خلف</button>
+                    </div>
+                </div>
+
+                <!-- التحكم بالقلم -->
+                <div class="card">
+                    <h3><i class="fas fa-pencil-alt"></i> التحكم بالقلم</h3>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="manualServo(1, 'in')">
+                            <i class="fas fa-arrow-left"></i> إدخال القلم
+                        </button>
+                        <button class="btn btn-secondary" onclick="manualServo(1, 'out')">
+                            <i class="fas fa-arrow-right"></i> إخراج القلم
+                        </button>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn btn-secondary" onclick="manualServo(2, 'up')">
+                            <i class="fas fa-arrow-up"></i> رفع القلم
+                        </button>
+                        <button class="btn btn-secondary" onclick="manualServo(2, 'down')">
+                            <i class="fas fa-arrow-down"></i> خفض القلم
+                        </button>
+                    </div>
+                </div>
+
+                <!-- التحكم بالمثقاب -->
+                <div class="card">
+                    <h3><i class="fas fa-tools"></i> التحكم بالمثقاب</h3>
+                    
+                    <div class="button-group">
+                        <button class="btn btn-secondary" onclick="manualServo(3, 'up')">
+                            <i class="fas fa-arrow-up"></i> رفع المثقاب
+                        </button>
+                        <button class="btn btn-secondary" onclick="manualServo(3, 'down')">
+                            <i class="fas fa-arrow-down"></i> إنزال المثقاب
+                        </button>
+                    </div>
+                    
+                    <div class="button-group" style="margin-top: 10px;">
+                        <button class="btn btn-danger" onclick="manualDrill(true)">
+                            <i class="fas fa-power-off"></i> تشغيل المثقاب
+                        </button>
+                        <button class="btn btn-secondary" onclick="manualDrill(false)">
+                            <i class="fas fa-stop"></i> إيقاف المثقاب
+                        </button>
+                    </div>
+                </div>
+
+                <!-- المعايرة -->
+                <div class="card">
+                    <h3><i class="fas fa-ruler"></i> المعايرة</h3>
+                    
+                    <p>قم بتدوير اللوحة يدوياً حتى يصبح القلم بين المسمار 0 والمسمار 1</p>
+                    
+                    <button class="btn btn-warning" onclick="calibrate()">
+                        <i class="fas fa-check-circle"></i> تعيين الموضع الحالي كمسمار 0
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== رسائل التنبيه ==================== -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ملفات JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

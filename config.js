@@ -1,37 +1,18 @@
 // ==================== إعدادات الموقع ====================
-// ✅ نسخة كاملة ومعدلة لتعمل مع EMQX
-
 const CONFIG = {
-    // معرف الآلة (يجب أن يطابق المعرف في كود ESP32)
+    // معرف الآلة - يجب أن يطابق المعرف في كود ESP32
     MACHINE_ID: 'machine_001',
     
-    // إعدادات MQTT - استخدام EMQX
+    // إعدادات MQTT - استخدام EMQX (الأكثر استقراراً)
     MQTT: {
-        USE_HIVEMQ: false,        // عطل HiveMQ
-        USE_EMQX: true,           // فعّل EMQX (مستقر)
-        USE_MOSQUITTO: false,     // عطل Mosquitto
+        USE_HIVEMQ: false,        // HiveMQ معطل
+        USE_EMQX: true,           // EMQX مفعل - الأفضل
+        USE_MOSQUITTO: false,     // Mosquitto معطل
         
         // روابط الخوادم
         HIVEMQ_URL: 'wss://broker.hivemq.com:8000/mqtt',
-        EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',  // EMQX عبر WebSocket
+        EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',  // الرابط الصحيح لـ EMQX
         MOSQUITTO_URL: 'wss://test.mosquitto.org:8081/mqtt',
-        
-        // مواضيع MQTT الأساسية
-        TOPICS: {
-            COMMAND: 'stringart/command',
-            STATUS: 'stringart/status',
-            FILE: 'stringart/file',
-            MANUAL: 'stringart/manual',
-            SETTINGS: 'stringart/settings',
-            RESPONSE: 'stringart/response'
-        }
-    },
-    
-    // إعدادات Firebase (معطل - غير مستخدم)
-    FIREBASE: {
-        USE_FIREBASE: false,
-        DATABASE_URL: 'https://your-project.firebaseio.com',
-        API_KEY: 'your-api-key'
     },
     
     // إعدادات الموقع والواجهة
@@ -43,7 +24,7 @@ const CONFIG = {
     }
 };
 
-// تحديد عنوان MQTT النشط (تلقائي)
+// تحديد عنوان MQTT النشط تلقائياً
 let MQTT_URL = '';
 
 if (CONFIG.MQTT.USE_EMQX) {

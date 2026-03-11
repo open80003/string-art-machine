@@ -5,15 +5,12 @@ const CONFIG = {
     
     // إعدادات MQTT - استخدام EMQX (الأكثر استقراراً)
     MQTT: {
-        USE_HIVEMQ: true,        // HiveMQ معطل
-        USE_EMQX: false,           // EMQX مفعل - الأفضل
-        USE_MOSQUITTO: false,     // Mosquitto معطل
-        
-        // روابط الخوادم
-        HIVEMQ_URL: 'wss://broker.hivemq.com:8000/mqtt',
-        EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',  // الرابط الصحيح لـ EMQX
-        MOSQUITTO_URL: 'wss://test.mosquitto.org:8081/mqtt',
-    },
+    USE_HIVEMQ: false,        // عطل HiveMQ
+    USE_EMQX: true,           // فعّل EMQX
+    USE_MOSQUITTO: false,
+    
+    EMQX_URL: 'wss://broker.emqx.io:8084/mqtt',  // الرابط الصحيح
+}
     
     // إعدادات الموقع والواجهة
     UI: {
